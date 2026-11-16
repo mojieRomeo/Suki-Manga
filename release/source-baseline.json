@@ -1,0 +1,108 @@
+{
+  "version": "0.8.11+811",
+  "apk": "SukiManga-0.8.11-Android.apk",
+  "apkBytes": 329382850,
+  "apkSha256": "9ec4724694558de2f0a92c762c565d2e6bbf208811c3a71dff576c3c94a617b9",
+  "runtimeSourceAndResources": [
+    {
+      "path": "app/lib/data.dart",
+      "sha256": "63e449e04be8f942b203a542aa5a139d2aa5d605470ddb8bf1d9d86aa8ecc359"
+    },
+    {
+      "path": "app/lib/main.dart",
+      "sha256": "a07a6a54ee330ee16a1624810b187b8896295c38209f8e76ad4d86f734ba9564"
+    },
+    {
+      "path": "app/lib/reader.dart",
+      "sha256": "73f4cabaf9bcc5fd761b0e81a428214fbbc4c855a7c43fff49e1994a57152431"
+    },
+    {
+      "path": "app/lib/screens.dart",
+      "sha256": "5a91f52b0fb2f2d46171dce391091499bac0d0ace733d2f1af717fa8fc0b62be"
+    },
+    {
+      "path": "app/lib/splash.dart",
+      "sha256": "e53c2b82572d3823ddab17a18e75806cc6e5efab4974e19d5229b96d0abc83b6"
+    },
+    {
+      "path": "app/lib/startup.dart",
+      "sha256": "842a7d0e6de347af2697f434c6baa33e35062d42190c231b8791d4b0813005d5"
+    },
+    {
+      "path": "app/android/app/src/main/AndroidManifest.xml",
+      "sha256": "dc5777121ca6f7e4c002e29b0c183f672eb082f7a3bfc950090cbf16b3cad0a6"
+    },
+    {
+      "path": "app/android/app/src/main/java/com/gejian/gejian/ComicEngine.java",
+      "sha256": "9f7bdf394a98fe43056a17ed1bff7d2fdad0147fbb8cba218f08aed2f96bbcf8"
+    },
+    {
+      "path": "app/android/app/src/main/kotlin/com/gejian/gejian/MainActivity.kt",
+      "sha256": "8ca94d2c12174e67e63d78a0bd98431f1435ab69b1a5eaeb3b4c840054774f85"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable/launch_background.xml",
+      "sha256": "62ef65c8d3ea161f27e246fab2ad3cfa4704785ad75a6e668244346d9a78878e"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable/suki_splash_icon.xml",
+      "sha256": "f03400ea66fef7aed55f5fe653937b4992e3ce0c8ef3321081f0a1642228fb5b"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable/suki_wordmark.xml",
+      "sha256": "4b1bc9b845a39b61564ad6b654d0d9fb3adca68025f136d18061201ffcfbc159"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable-nodpi/muse_launcher_art.png",
+      "sha256": "6bf754028466429fd8a88e5aa8579be29fe16e4ecbe01380083805f9dbd917a6"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable-nodpi/startup_preview.jpg",
+      "sha256": "419c0204482dc2c95ce62561de89beaa3cfe362cb14aa42b11d502ccf17fdd58"
+    },
+    {
+      "path": "app/android/app/src/main/res/drawable-v21/launch_background.xml",
+      "sha256": "62ef65c8d3ea161f27e246fab2ad3cfa4704785ad75a6e668244346d9a78878e"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "sha256": "20f81f45477dc73596ed420a5b98ff9a821f9df6e36cd8ec1b45d428fae1c8d6"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "sha256": "413ea32bc8d6837ca9fb61397865db99e764f8a20559a230cda79440b7d920a2"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "sha256": "ce75d3abb5a7324df76624e2e0e806c554283bb909a0e28d9a3cdc0ab274a267"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "sha256": "558046d2f53467dedf02af3bbc04f5800ccb323bbcdebdbb0c80859441d73dbc"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "sha256": "527130d53e26f9ca1f43973d4a38d2241c55b436190271cb3a38bd69e41fbdea"
+    },
+    {
+      "path": "app/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "sha256": "35f5ff660d2f5f226b2179e825caf7654658e454cda412fa1a72241c8fd0463d"
+    },
+    {
+      "path": "app/android/app/src/main/res/values/styles.xml",
+      "sha256": "bae4e5beec72e44282b22ede59e6d56753000e54dc7b98aa6506af881ee43d8c"
+    },
+    {
+      "path": "app/android/app/src/main/res/values-night/styles.xml",
+      "sha256": "590440e96cdc2a3b877e8feaa08ec6be14d1c18c42cb4c87b9033cf48ebee27c"
+    },
+    {
+      "path": "app/android/app/src/main/res/values-night-v31/styles.xml",
+      "sha256": "8b8cb8103786a2fdefaafabb4413765ec0e284d9601de19889cabbee47c4a976"
+    },
+    {
+      "path": "app/android/app/src/main/res/values-v31/styles.xml",
+      "sha256": "8b8cb8103786a2fdefaafabb4413765ec0e284d9601de19889cabbee47c4a976"
+    }
+  ]
+}

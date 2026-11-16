@@ -1,0 +1,68 @@
+{
+  "release": "v0.8.11",
+  "url": "https://github.com/mojieRomeo/Suki-Manga/releases/download/v0.8.11/SukiManga-0.8.11-models.zip",
+  "bytes": 340488676,
+  "sha256": "a5312284f37bb6b82610a4df015da47a673569cdbed9049dd7168c81efc1a28e",
+  "files": [
+    {
+      "path": "app/android/app/src/main/assets/models/bubbles.pte",
+      "bytes": 11555712,
+      "sha256": "afb3f4cfafe27dc600874091b8d7a1c7647a38e45d5f6cbad425000353882dca"
+    },
+    {
+      "path": "app/android/app/src/main/assets/models/magi.pte",
+      "bytes": 174861444,
+      "sha256": "17237d082877f3eed5fc2a796747df7f0a69a2e13d47def9097a711365fcfd8c"
+    },
+    {
+      "path": "models/source/model/bubble-seg.pt",
+      "bytes": 5994916,
+      "sha256": "60fe35d6664c71084edd6a56738ed10ca4fae2052fab21faaa7f43f401a39d84"
+    },
+    {
+      "path": "models/source/model/conditional_detr_utils.py",
+      "bytes": 7812,
+      "sha256": "867b539a5eb0596670a9747fb340bb4f3f106e0a1034c2dc8f94fee1067b84c7"
+    },
+    {
+      "path": "models/source/model/config.json",
+      "bytes": 12937,
+      "sha256": "d2bba2e467f12843c29837b70a1adf8d9da249107990647764da6f487db18454"
+    },
+    {
+      "path": "models/source/model/configuration_magi.py",
+      "bytes": 1672,
+      "sha256": "a86301226fc88cdd4a50ee339551f2824d9bfbde7444954622babe13cd6512b7"
+    },
+    {
+      "path": "models/source/model/manifest.json",
+      "bytes": 247,
+      "sha256": "47a1169a267b1f6b8bb4b979fd9dd38d0eaab24d359ca15b2279f8fb373980cd"
+    },
+    {
+      "path": "models/source/model/model.safetensors",
+      "bytes": 174620128,
+      "sha256": "007e9f07f2058ad82c626e4e083ef1d96ef74905c52d79599f5202a559370ef1"
+    },
+    {
+      "path": "models/source/model/modelling_magi.py",
+      "bytes": 27566,
+      "sha256": "b90e7324ac9b7b70ae43a60243b37a9aea2d445e942a62ff9b20307d33566e8f"
+    },
+    {
+      "path": "models/source/model/processing_magi.py",
+      "bytes": 14693,
+      "sha256": "deaf43ed10be7f3a37272cb3561e7fb6cdeb5b7e7b285e81a660156578d1f8ea"
+    },
+    {
+      "path": "models/source/model/README.md",
+      "bytes": 4007,
+      "sha256": "3a2712eb8339195403dcb61b09011d20879645bf5e9bc1ff06f8334d6d3487c4"
+    },
+    {
+      "path": "models/source/model/utils.py",
+      "bytes": 15700,
+      "sha256": "25313e9745f9e37779eb1e643c8c7c24d943a303d29babfa08109575b047a62f"
+    }
+  ]
+}
