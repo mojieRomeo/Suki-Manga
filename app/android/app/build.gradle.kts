@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,7 +8,7 @@ plugins {
 }
 
 android {
-    val releaseProperties = java.util.Properties()
+    val releaseProperties = Properties()
     val releasePropertiesFile = rootProject.file("key.properties")
     if (releasePropertiesFile.exists()) {
         releasePropertiesFile.inputStream().use { releaseProperties.load(it) }
