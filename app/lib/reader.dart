@@ -9,11 +9,12 @@ import 'package:flutter/material.dart';
 
 import 'data.dart';
 import 'screens.dart';
+import 'vertical_reader.dart';
 
 int swipePageDelta(Offset delta) {
   if (delta.distance < 50) return 0;
   if (delta.dx.abs() > delta.dy.abs() * 1.3) return delta.dx > 0 ? 1 : -1;
-  if (delta.dy.abs() > delta.dx.abs() * 1.3) return delta.dy > 0 ? 1 : -1;
+  if (delta.dy.abs() > delta.dx.abs() * 1.3) return delta.dy < 0 ? 1 : -1;
   return 0;
 }
 
@@ -128,6 +129,8 @@ class _ReaderPageState extends State<ReaderPage> {
   final transform = TransformationController();
   double drag = 0;
   bool single = true;
+  bool verticalReading = false;
+  int verticalStart = 0;
   List<dynamic>? activeBubble;
   Offset? pointerStart;
   final Set<int> pointers = {};
@@ -209,32 +212,39 @@ class _ReaderPageState extends State<ReaderPage> {
             i,
         ];
         if (candidates.isEmpty) break;
-        // Two download slots; one inference at a time, nearest page first.
-        for (int i = 0; i < candidates.length; i += 2) {
-          final batch = candidates.skip(i).take(2).toList();
-          await Future.wait(
-            batch.map(
-              (index) => widget.store.page(widget.book, targetChapter, index),
-            ),
-          );
-          for (final index in batch) {
-            if (!mounted ||
-                loading ||
-                analyzing ||
-                !identical(chapter, targetChapter)) {
-              return;
-            }
-            if (index <= page) continue;
-            final file = await widget.store.page(
-              widget.book,
-              targetChapter,
-              index,
-            );
-            final watch = Stopwatch()..start();
-            await widget.store.recognize(file, background: true);
-            inferenceMs = inferenceMs * .7 + watch.elapsedMilliseconds * .3;
-            preparedThrough = index;
+        // Download the small lookahead concurrently; recognize nearest first
+        // as soon as it arrives, without waiting for a slower later page.
+        final downloads = {
+          for (final index in candidates)
+            index: widget.store.page(widget.book, targetChapter, index),
+        };
+        for (final download in downloads.values) {
+          download.ignore();
+        }
+        for (final index in candidates) {
+          final file = await downloads[index]!;
+          if (!mounted ||
+              loading ||
+              analyzing ||
+              !identical(chapter, targetChapter)) {
+            return;
           }
+          if (index <= page) continue;
+          final watch = Stopwatch()..start();
+          final result = await widget.store.recognize(file, background: true);
+          if (!mounted ||
+              loading ||
+              analyzing ||
+              !identical(chapter, targetChapter)) {
+            return;
+          }
+          final width = (result['width'] as num?)?.toInt() ?? 0;
+          final height = (result['height'] as num?)?.toInt() ?? 0;
+          if (width > 0 && height > 0) {
+            await widget.store.prepareDisplay(file, width, height);
+          }
+          inferenceMs = inferenceMs * .7 + watch.elapsedMilliseconds * .3;
+          preparedThrough = index;
         }
       }
     } catch (_) {
@@ -319,6 +329,29 @@ class _ReaderPageState extends State<ReaderPage> {
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
       codec.dispose();
+      if (!mounted || t != ticket) {
+        frame.image.dispose();
+        return;
+      }
+      // Long strips use their own unmasked, width-fitted scrolling reader.
+      // Never send them through the ordinary page/panel presentation pipeline.
+      if (isVerticalComic(frame.image.width, frame.image.height)) {
+        image?.dispose();
+        setState(() {
+          image = frame.image;
+          verticalReading = true;
+          verticalStart = index;
+          layout = {};
+          beats = [const Beat(0, full: true)];
+          loading = false;
+          analyzing = false;
+        });
+        await record();
+        return;
+      }
+      verticalReading = false;
+      final recognition = widget.store.recognize(file);
+      recognition.ignore();
       Json display;
       try {
         display = await widget.store.prepareDisplay(
@@ -344,7 +377,7 @@ class _ReaderPageState extends State<ReaderPage> {
       });
       if (analyzing) {
         try {
-          final data = await widget.store.recognize(file);
+          final data = await recognition;
           if (!mounted || t != ticket) return;
           // Display geometry belongs to this decoded page. Inference and cached
           // layouts must not change its position after the first visible frame.
@@ -655,54 +688,55 @@ class _ReaderPageState extends State<ReaderPage> {
               backgroundColor: Colors.white,
               foregroundColor: Theme.of(c).colorScheme.primary,
               actions: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () => mode(true),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          '逐格',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: single
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                if (!verticalReading)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => mode(true),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 12,
+                          ),
+                          child: Text(
+                            '逐格',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: single
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    CupertinoSwitch(
-                      value: !single,
-                      onChanged: (v) => mode(!v),
-                      activeTrackColor: Theme.of(c).colorScheme.primary,
-                      inactiveTrackColor: Theme.of(c).colorScheme.primary
-                          .withValues(alpha: .4),
-                    ),
-                    GestureDetector(
-                      onTap: () => mode(false),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          '整页',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: !single
-                                ? FontWeight.w600
-                                : FontWeight.normal,
+                      CupertinoSwitch(
+                        value: !single,
+                        onChanged: (v) => mode(!v),
+                        activeTrackColor: Theme.of(c).colorScheme.primary,
+                        inactiveTrackColor: Theme.of(c).colorScheme.primary
+                            .withValues(alpha: .4),
+                      ),
+                      GestureDetector(
+                        onTap: () => mode(false),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 12,
+                          ),
+                          child: Text(
+                            '整页',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: !single
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 IconButton(
                   tooltip: '章节与页码',
                   onPressed: contents,
@@ -774,113 +808,135 @@ class _ReaderPageState extends State<ReaderPage> {
               ],
             )
           : null,
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) {
-          busyGesture = loading || analyzing || error != null;
-          busyDrag = Offset.zero;
-        },
-        onVerticalDragUpdate: (d) {
-          if (busyGesture) busyDrag += d.delta;
-        },
-        onVerticalDragEnd: (_) {
-          if (busyGesture) flipPage(loadingPageDelta(busyDrag));
-          busyGesture = false;
-        },
-        onHorizontalDragStart: (_) {
-          busyGesture = loading || analyzing || error != null;
-          busyDrag = Offset.zero;
-        },
-        onHorizontalDragUpdate: (d) {
-          if (busyGesture) busyDrag += d.delta;
-        },
-        onHorizontalDragEnd: (_) {
-          if (busyGesture) flipPage(loadingPageDelta(busyDrag));
-          busyGesture = false;
-        },
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: loading || (analyzing && single)
-                    ? const Busy()
-                    : error != null
-                    ? Failure(error!, () => load(page))
-                    : LayoutBuilder(
-                        builder: (c, box) {
-                          viewSize = box.biggest;
-                          return Listener(
-                            onPointerDown: (e) {
-                              pointers.add(e.pointer);
-                              if (pointers.length == 1) {
-                                pointerStart = e.localPosition;
-                                multiple = false;
-                              } else {
-                                multiple = true;
-                              }
-                            },
-                            onPointerUp: (e) {
-                              pointers.remove(e.pointer);
-                              if (!multiple && pointerStart != null) {
-                                final delta = e.localPosition - pointerStart!;
-                                if (swipePageDelta(delta) != 0 &&
-                                    transform.value.getMaxScaleOnAxis() <
-                                        1.02) {
-                                  if (delta.dy.abs() > delta.dx.abs()) {
-                                    if (swipePageDelta(delta) > 0) {
-                                      next();
+      body: verticalReading && !loading && error == null && image != null
+          ? VerticalComicReader(
+              key: ValueKey('$ticket:${chapter.id}'),
+              initialPage: verticalStart,
+              initialImage: image!,
+              pageCount: chapter.pages.length,
+              loadPage: (index) =>
+                  widget.store.page(widget.book, chapter, index),
+              recognizeBubbles: widget.store.setting('bubbles', true)
+                  ? (file) => widget.store.recognize(file, background: true)
+                  : null,
+              onPageChanged: (index) {
+                if (page == index) return;
+                setState(() => page = index);
+                unawaited(record());
+              },
+              onEnd: () {
+                page = chapter.pages.length - 1;
+                return next();
+              },
+            )
+          : GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onVerticalDragStart: (_) {
+                busyGesture = loading || analyzing || error != null;
+                busyDrag = Offset.zero;
+              },
+              onVerticalDragUpdate: (d) {
+                if (busyGesture) busyDrag += d.delta;
+              },
+              onVerticalDragEnd: (_) {
+                if (busyGesture) flipPage(loadingPageDelta(busyDrag));
+                busyGesture = false;
+              },
+              onHorizontalDragStart: (_) {
+                busyGesture = loading || analyzing || error != null;
+                busyDrag = Offset.zero;
+              },
+              onHorizontalDragUpdate: (d) {
+                if (busyGesture) busyDrag += d.delta;
+              },
+              onHorizontalDragEnd: (_) {
+                if (busyGesture) flipPage(loadingPageDelta(busyDrag));
+                busyGesture = false;
+              },
+              child: SafeArea(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: loading || (analyzing && single)
+                          ? const Busy()
+                          : error != null
+                          ? Failure(error!, () => load(page))
+                          : LayoutBuilder(
+                              builder: (c, box) {
+                                viewSize = box.biggest;
+                                return Listener(
+                                  onPointerDown: (e) {
+                                    pointers.add(e.pointer);
+                                    if (pointers.length == 1) {
+                                      pointerStart = e.localPosition;
+                                      multiple = false;
                                     } else {
-                                      previous();
+                                      multiple = true;
                                     }
-                                  } else {
-                                    flipPage(swipePageDelta(delta));
-                                  }
-                                } else if (delta.distance < 12) {
-                                  tapBubble(e.localPosition);
-                                }
-                              }
-                              if (pointers.isEmpty) pointerStart = null;
-                            },
-                            onPointerCancel: (e) {
-                              pointers.remove(e.pointer);
-                              multiple = true;
-                            },
-                            child: GestureDetector(
-                              onDoubleTap: () =>
-                                  setState(() => controls = !controls),
-                              child: InteractiveViewer(
-                                transformationController: transform,
-                                minScale: 1,
-                                maxScale: 4,
-                                child: CustomPaint(
-                                  size: box.biggest,
-                                  painter: ComicPainter(
-                                    image!,
-                                    layout,
-                                    beat,
-                                    single: single,
+                                  },
+                                  onPointerUp: (e) {
+                                    pointers.remove(e.pointer);
+                                    if (!multiple && pointerStart != null) {
+                                      final delta =
+                                          e.localPosition - pointerStart!;
+                                      if (swipePageDelta(delta) != 0 &&
+                                          transform.value.getMaxScaleOnAxis() <
+                                              1.02) {
+                                        if (delta.dy.abs() > delta.dx.abs()) {
+                                          if (swipePageDelta(delta) > 0) {
+                                            next();
+                                          } else {
+                                            previous();
+                                          }
+                                        } else {
+                                          flipPage(swipePageDelta(delta));
+                                        }
+                                      } else if (delta.distance < 12) {
+                                        tapBubble(e.localPosition);
+                                      }
+                                    }
+                                    if (pointers.isEmpty) pointerStart = null;
+                                  },
+                                  onPointerCancel: (e) {
+                                    pointers.remove(e.pointer);
+                                    multiple = true;
+                                  },
+                                  child: GestureDetector(
+                                    onDoubleTap: () =>
+                                        setState(() => controls = !controls),
+                                    child: InteractiveViewer(
+                                      transformationController: transform,
+                                      minScale: 1,
+                                      maxScale: 4,
+                                      child: CustomPaint(
+                                        size: box.biggest,
+                                        painter: ComicPainter(
+                                          image!,
+                                          layout,
+                                          beat,
+                                          single: single,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
-                          );
-                        },
+                    ),
+                    if (!controls)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: IconButton(
+                          tooltip: '显示工具栏',
+                          onPressed: () => setState(() => controls = true),
+                          icon: const Icon(Icons.more_horiz),
+                        ),
                       ),
-              ),
-              if (!controls)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: IconButton(
-                    tooltip: '显示工具栏',
-                    onPressed: () => setState(() => controls = true),
-                    icon: const Icon(Icons.more_horiz),
-                  ),
+                  ],
                 ),
-            ],
-          ),
-        ),
-      ),
+              ),
+            ),
       bottomNavigationBar: controls
           ? SafeArea(
               child: Container(

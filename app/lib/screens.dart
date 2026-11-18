@@ -66,7 +66,7 @@ class _CacheBrowserState extends State<CacheBrowser> {
   static const pageSize = 20;
   bool deleting = false;
   late Future<List<Json>> entries;
-  final folders = ['analysis', 'covers', 'pages', 'imports', 'startup'];
+  final folders = ['analysis', 'covers', 'pages', 'imports'];
   @override
   void initState() {
     super.initState();
@@ -146,10 +146,7 @@ class _CacheBrowserState extends State<CacheBrowser> {
           if (row != null) removed += row['bytes'] as int;
         },
       );
-      if (category == 4) {
-        StartupData.feeds.clear();
-        PaintingBinding.instance.imageCache.clear();
-      }
+
       if (mounted) message(context, '已删除 ${megabytes(removed)} 存储文件');
     } catch (e) {
       if (mounted) {
@@ -175,11 +172,11 @@ class _CacheBrowserState extends State<CacheBrowser> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < folders.length; i++)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(['识别结果', '封面', '章节图片', '导入副本', '每日开屏'][i]),
+                      label: Text(['识别结果', '封面', '章节图片', '导入副本'][i]),
                       selected: category == i,
                       onSelected: deleting
                           ? null
@@ -328,6 +325,22 @@ class Failure extends StatelessWidget {
           Text(friendlyError(error), textAlign: TextAlign.center),
           const SizedBox(height: 16),
           FilledButton.tonal(onPressed: retry, child: const Text('重试')),
+          if (error is WebsiteVerificationRequired)
+            TextButton.icon(
+              icon: const Icon(Icons.open_in_browser),
+              label: const Text('验证书源'),
+              onPressed: () async {
+                try {
+                  final requirement = error as WebsiteVerificationRequired;
+                  final completed = await requirement.open();
+                  if (c.mounted && completed) {
+                    retry();
+                  }
+                } catch (e) {
+                  if (c.mounted) message(c, e);
+                }
+              },
+            ),
           if (error is SourceVerificationRequired)
             TextButton.icon(
               icon: const Icon(Icons.open_in_browser),
@@ -682,11 +695,13 @@ class _LibraryHomeState extends State<LibraryHome> {
 class BookGrid extends StatelessWidget {
   final List<Book> books;
   final LibraryStore store;
+  final ScrollController? controller;
   final void Function(Book) onTap;
   const BookGrid({
     super.key,
     required this.books,
     required this.store,
+    this.controller,
     required this.onTap,
   });
   @override
@@ -696,6 +711,7 @@ class BookGrid extends StatelessWidget {
       final width = (box.maxWidth - 44 - (columns - 1) * 18) / columns;
       return GridView.builder(
         key: const PageStorageKey('book-grid'),
+        controller: controller,
         padding: const EdgeInsets.fromLTRB(22, 10, 22, 90),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
@@ -967,6 +983,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   String source = 'md', query = '';
   late Future<List<Book>> results;
   final input = TextEditingController();
+  final resultScroll = ScrollController(keepScrollOffset: false);
   List<Book> items = [];
   bool more = false, hasMore = true;
   String? moreError;
@@ -985,6 +1002,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   @override
   void dispose() {
     input.dispose();
+    resultScroll.dispose();
     super.dispose();
   }
 
@@ -1002,7 +1020,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
   }
 
   Future<void> changePage(int target) async {
-    if (target < 0 || changingPage) return;
+    if (target < 0 || changingPage || (target > resultPage && !hasMore)) {
+      return;
+    }
     final t = ticket;
     setState(() => changingPage = true);
     try {
@@ -1018,7 +1038,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
           resultPages[target] = next;
           items = next;
           resultPage = target;
-          hasMore = next.length == 30;
+          hasMore = next.length >= 30;
           moreError = null;
         });
       }
@@ -1038,7 +1058,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
           child: SearchBar(
             elevation: const WidgetStatePropertyAll(0),
             controller: input,
-            hintText: '在 ${source == 'md' ? 'MangaDex' : '拷贝漫画'} 中搜索漫画',
+            hintText: '在 ${Sources.names[source]} 中搜索漫画',
             leading: const Icon(Icons.search),
             onSubmitted: (value) => setState(() {
               query = value;
@@ -1063,7 +1083,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 icon: CircleAvatar(
                   radius: 18,
                   child: Text(
-                    source == 'md' ? 'M' : '拷',
+                    Sources.names[source]!.substring(0, 1),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1075,16 +1095,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     enabled: false,
                     child: Text('书源'),
                   ),
-                  CheckedPopupMenuItem<String>(
-                    value: 'md',
-                    checked: source == 'md',
-                    child: const Text('MangaDex'),
-                  ),
-                  CheckedPopupMenuItem<String>(
-                    value: 'copy',
-                    checked: source == 'copy',
-                    child: const Text('拷贝漫画'),
-                  ),
+                  for (final entry in Sources.names.entries)
+                    CheckedPopupMenuItem<String>(
+                      value: entry.key,
+                      checked: source == entry.key,
+                      child: Text(entry.value),
+                    ),
                 ],
               ),
             ],
@@ -1101,7 +1117,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               if (!resultPages.containsKey(0)) {
                 items = List.of(s.data!);
                 resultPages[0] = items;
-                hasMore = items.length == 30;
+                hasMore = items.length >= 30;
               }
               if (items.isEmpty) {
                 return Center(
@@ -1118,6 +1134,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                         : BookGrid(
                             key: ValueKey('$source:$query:$resultPage'),
                             books: items,
+                            controller: resultScroll,
                             store: widget.store,
                             onTap: (b) => Navigator.push(
                               c,
@@ -1138,7 +1155,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
                             : null,
                         icon: const Icon(Icons.chevron_left),
                       ),
-                      Text('第 ${resultPage + 1} 页 · 每页 30 本'),
+                      Text(
+                        source == 'md' || source == 'copy'
+                            ? '第 ${resultPage + 1} 页 · 每页 30 本'
+                            : '第 ${resultPage + 1} 页 · ${items.length} 本',
+                      ),
                       IconButton(
                         tooltip: '下一页搜索结果',
                         onPressed: hasMore && !changingPage
@@ -1237,7 +1258,7 @@ class _BookDetailState extends State<BookDetail> {
 
   void load() {
     chapterError = null;
-    loading = Sources.chapters(widget.book).then((_) async {
+    loading = loadChapters().then((_) async {
       await widget.store.remember(widget.book);
       unawaited(refreshReady());
       if (mounted) {
@@ -1245,7 +1266,12 @@ class _BookDetailState extends State<BookDetail> {
         unawaited(continueChapters());
       }
     });
+    // A cached failure can complete before the next frame attaches FutureBuilder.
+    // Keep it handled here while FutureBuilder still displays the same error.
+    loading.ignore();
   }
+
+  Future<void> loadChapters() => Sources.chapters(widget.book);
 
   Future<void> continueChapters() async {
     if (moreLoading || widget.book.source != 'md') return;
@@ -1387,11 +1413,7 @@ class _BookDetailState extends State<BookDetail> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      '${b.source == 'md'
-                                          ? 'MangaDex'
-                                          : b.source == 'copy'
-                                          ? '拷贝漫画'
-                                          : '本地漫画'} · ${b.chapters.length} 章',
+                                      '${Sources.names[b.source] ?? '本地漫画'} · ${b.chapters.length} 章',
                                     ),
                                     const SizedBox(height: 18),
                                     opening

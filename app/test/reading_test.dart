@@ -22,7 +22,7 @@ void main() {
         false,
       );
       final bytes = await File(
-        'test/fixtures/synthetic-page.jpg',
+        'test/fixtures/synthetic-page.png',
       ).readAsBytes();
       expect(await LibraryStore.validImage(bytes), true);
     },
@@ -69,8 +69,11 @@ void main() {
       expect(find.text('输入漫画名称开始搜索'), findsOneWidget);
       await tester.tap(find.byTooltip('切换书源'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('拷贝漫画'));
+      await tester.tap(
+        find.widgetWithText(CheckedPopupMenuItem<String>, '拷贝漫画'),
+      );
       await tester.pumpAndSettle();
+      expect(find.text('在 拷贝漫画 中搜索漫画'), findsOneWidget);
       expect(find.text('输入漫画名称开始搜索'), findsOneWidget);
       expect(calls, isEmpty);
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

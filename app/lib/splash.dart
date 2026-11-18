@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,88 +10,120 @@ import 'startup.dart';
 
 class MuseSplash extends StatefulWidget {
   final LibraryStore store;
-  const MuseSplash({super.key, required this.store});
+  final VoidCallback? onArtworkReady;
+  const MuseSplash({super.key, required this.store, this.onArtworkReady});
   @override
   State<MuseSplash> createState() => _MuseSplashState();
 }
 
 class _MuseSplashState extends State<MuseSplash> with TickerProviderStateMixin {
-  late final AnimationController motion, intro, fade;
-  Timer? introTimer, exitTimer;
-  ui.Image? wall;
-  bool finished = false;
+  late final AnimationController timeline, skipFade;
+  ui.Image? title;
+  bool finished = false, skipping = false, reduceMotion = false;
+  bool homeReady = false;
+  Timer? homeWarmup;
+
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
-      ),
-    );
-    motion = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    );
-    intro = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 650),
-    );
-    fade =
+    timeline =
         AnimationController(
           vsync: this,
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 3200),
         )..addStatusListener((status) {
           if (status == AnimationStatus.completed && mounted) {
-            SystemChrome.setSystemUIOverlayStyle(
-              SystemUiOverlayStyle.dark.copyWith(
-                statusBarColor: Colors.transparent,
-                systemNavigationBarColor: Colors.transparent,
-              ),
-            );
             setState(() => finished = true);
           }
         });
-    unawaited(StartupData.prepare(widget.store).catchError((_) => <File>[]));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(loadWall());
-      introTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        intro.forward();
-        if (!MediaQuery.disableAnimationsOf(context)) motion.forward();
+    skipFade = AnimationController(vsync: this)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          setState(() => finished = true);
+        }
       });
-      exitTimer = Timer(const Duration(milliseconds: 4900), enter);
+    unawaited(StartupData.prepare(widget.store).catchError((_) {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(prepareArtwork());
     });
   }
 
-  Future<void> loadWall() async {
-    final bytes = await rootBundle.load('assets/branding/startup_fallback.jpg');
-    final codec = await ui.instantiateImageCodec(bytes.buffer.asUint8List());
-    final image = (await codec.getNextFrame()).image;
-    codec.dispose();
-    if (!mounted) {
+  Future<ui.Image> decode(String asset) async {
+    final bytes = await rootBundle.load(asset);
+    final codec = await ui.instantiateImageCodec(
+      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+    );
+    try {
+      return (await codec.getNextFrame()).image;
+    } finally {
+      codec.dispose();
+    }
+  }
+
+  Future<void> prepareArtwork() async {
+    // Decode before starting the clock; never swap artwork during a fade.
+    late final ui.Image image;
+    try {
+      image = await decode('assets/branding/startup_title.png');
+    } catch (_) {
+      // A damaged installation must still be able to reach the homepage.
+      if (!mounted) return;
+      widget.onArtworkReady?.call();
+      if (!finished) enter();
+      return;
+    }
+    if (!mounted || finished) {
       image.dispose();
       return;
     }
-    // Decode once behind the title, never replace a visible wall.
-    setState(() => wall = image);
+    setState(() {
+      title = image;
+    });
+    reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (reduceMotion) timeline.duration = const Duration(milliseconds: 1400);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    var initialProgress = 0.0;
+    if (!reduceMotion) {
+      try {
+        final elapsed = await native.invokeMethod<int>('startupElapsed');
+        // The native splash already shows the same wordmark while Dart loads.
+        initialProgress = ((elapsed ?? 0) / 3200).clamp(0.0, 1800 / 3200);
+      } on MissingPluginException {
+        // Widget tests and other platforms start the complete Flutter timeline.
+      } on PlatformException {
+        // Startup remains usable if the timing hint is unavailable.
+      }
+    }
+    if (!mounted) return;
+    widget.onArtworkReady?.call();
+    // Render the wordmark before paying the cost of building the homepage.
+    homeWarmup = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => homeReady = true);
+    });
+    if (mounted && !finished && !skipping) {
+      timeline.forward(from: initialProgress);
+    }
   }
 
   void enter() {
-    if (!mounted || finished || fade.isAnimating) return;
-    introTimer?.cancel();
-    exitTimer?.cancel();
-    fade.forward();
+    if (finished || skipping) return;
+    skipping = true;
+    // Freeze the artwork and fade it out without rushing through later stages.
+    timeline.stop();
+    reduceMotion = MediaQuery.disableAnimationsOf(context);
+    skipFade.animateTo(
+      1,
+      duration: Duration(milliseconds: reduceMotion ? 150 : 500),
+      curve: Curves.easeInOutCubic,
+    );
   }
 
   @override
   void dispose() {
-    introTimer?.cancel();
-    exitTimer?.cancel();
-    motion.dispose();
-    intro.dispose();
-    fade.dispose();
-    wall?.dispose();
+    timeline.dispose();
+    skipFade.dispose();
+    homeWarmup?.cancel();
+    title?.dispose();
     super.dispose();
   }
 
@@ -100,79 +131,62 @@ class _MuseSplashState extends State<MuseSplash> with TickerProviderStateMixin {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      LibraryHome(store: widget.store),
+      ExcludeSemantics(
+        excluding: !finished,
+        child: IgnorePointer(
+          ignoring: !finished,
+          child: homeReady || skipping || finished
+              ? RepaintBoundary(child: LibraryHome(store: widget.store))
+              : const ColoredBox(color: Colors.black),
+        ),
+      ),
       if (!finished)
-        FadeTransition(
-          opacity: ReverseAnimation(
-            CurvedAnimation(parent: fade, curve: Curves.easeInOut),
-          ),
-          child: GestureDetector(
-            onTap: enter,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const ColoredBox(color: Color(0xff242127)),
-                AnimatedBuilder(
-                  animation: motion,
-                  builder: (context, _) => wall == null
-                      ? Image.asset(
-                          'assets/branding/startup_fallback.jpg',
-                          fit: BoxFit.cover,
-                        )
-                      : CustomPaint(painter: _WallPainter(wall!, motion.value)),
-                ),
-                FadeTransition(
-                  opacity: ReverseAnimation(
-                    CurvedAnimation(parent: intro, curve: Curves.easeInOut),
-                  ),
-                  child: ColoredBox(
-                    color: Colors.black,
-                    child: Center(
-                      child: SizedBox(
-                        width: MediaQuery.sizeOf(context).width * .52,
-                        child: const FittedBox(
-                          child: Text(
-                            'Suki Manga',
-                            style: TextStyle(
-                              fontFamily: 'SukiDisplay',
-                              fontSize: 48,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white,
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ),
+        AnimatedBuilder(
+          animation: Listenable.merge([timeline, skipFade]),
+          builder: (context, _) {
+            final normalExit = const Interval(
+              2000 / 3200,
+              1,
+              curve: Curves.easeInOutCubic,
+            ).transform(timeline.value);
+            final exit = normalExit + (1 - normalExit) * skipFade.value;
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value:
+                  (exit < .65
+                          ? SystemUiOverlayStyle.light
+                          : SystemUiOverlayStyle.dark)
+                      .copyWith(
+                        statusBarColor: Colors.transparent,
+                        systemNavigationBarColor: Colors.transparent,
+                        systemNavigationBarDividerColor: Colors.transparent,
                       ),
-                    ),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: enter,
+                child: Opacity(
+                  opacity: 1 - exit,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      const ColoredBox(color: Colors.black),
+                      Semantics(
+                        label: 'Suki Manga',
+                        image: true,
+                        child: title == null
+                            ? Image.asset(
+                                'assets/branding/startup_title.png',
+                                fit: BoxFit.fill,
+                                excludeFromSemantics: true,
+                              )
+                            : RawImage(image: title, fit: BoxFit.fill),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
     ],
   );
-}
-
-class _WallPainter extends CustomPainter {
-  final ui.Image image;
-  final double progress;
-  _WallPainter(this.image, this.progress);
-  @override
-  void paint(Canvas canvas, Size size) {
-    final height = size.width * image.height / image.width;
-    canvas.save();
-    canvas.clipRect(Offset.zero & size);
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(0, -progress * size.height * .22, size.width, height),
-      Paint()..filterQuality = FilterQuality.medium,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_WallPainter old) =>
-      old.image != image || old.progress != progress;
 }

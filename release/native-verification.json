@@ -1,0 +1,247 @@
+{
+  "passed": true,
+  "failures": [],
+  "slantedGeometry": true,
+  "environment": "Android emulator x86_64; ReaderProbe instrumentation; 2026-11-18",
+  "note": "Private regression fixtures are not included. Seconds are inference wall time, not page-turn latency or an accuracy benchmark.",
+  "results": [
+    {
+      "fixture": "actual-ambiguous.jpg",
+      "regions": 2,
+      "seconds": 4.888124195,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "actual-spread.jpg",
+      "regions": 2,
+      "seconds": 4.985161364,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "blank.png",
+      "regions": 0,
+      "seconds": 1.000870118,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "isekai-black-3.jpg",
+      "regions": 4,
+      "seconds": 4.422424043,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "isekai-black-4.jpg",
+      "regions": 4,
+      "seconds": 2.263803436,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "isekai-black-5.jpg",
+      "regions": 4,
+      "seconds": 2.415163035,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "isekai-shounin-live.jpg",
+      "regions": 4,
+      "seconds": 3.010672232,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "mushoku-04.jpg",
+      "regions": 4,
+      "seconds": 2.149601951,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "mushoku-06.jpg",
+      "regions": 4,
+      "seconds": 1.903121982,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "mushoku-15.jpg",
+      "regions": 5,
+      "seconds": 4.396580391,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "mushoku-91-05.jpg",
+      "regions": 6,
+      "seconds": 2.804057093,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "mushoku-live.jpg",
+      "regions": 6,
+      "seconds": 5.047267683,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "opm-02.jpg",
+      "regions": 3,
+      "seconds": 4.009890117,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "opm-07.jpg",
+      "regions": 5,
+      "seconds": 3.9188187,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "opm-15.jpg",
+      "regions": 3,
+      "seconds": 2.988756976,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "real-page.jpg",
+      "regions": 4,
+      "seconds": 3.419747636,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-black.png",
+      "regions": 3,
+      "seconds": 2.683137463,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-blue.png",
+      "regions": 3,
+      "seconds": 2.819942694,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-darkpurple.png",
+      "regions": 3,
+      "seconds": 2.852895577,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-gray.png",
+      "regions": 3,
+      "seconds": 1.312676023,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-green.png",
+      "regions": 3,
+      "seconds": 2.82334862,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-original-bubbles.jpg",
+      "regions": 4,
+      "seconds": 2.55441969,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-original-gray.jpg",
+      "regions": 3,
+      "seconds": 2.016056236,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-original-window.jpg",
+      "regions": 2,
+      "seconds": 1.931716307,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-pink.png",
+      "regions": 3,
+      "seconds": 3.429387715,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-window.png",
+      "regions": 1,
+      "seconds": 1.0973062,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "reported-yellow.png",
+      "regions": 3,
+      "seconds": 3.420895412,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "rezero-10.jpg",
+      "regions": 3,
+      "seconds": 1.984658219,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "rezero-12.jpg",
+      "regions": 2,
+      "seconds": 4.104986034,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "shounin-28.jpg",
+      "regions": 5,
+      "seconds": 2.577212759,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "thought-10.jpg",
+      "regions": 5,
+      "seconds": 2.514078472,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "user-slanted.png",
+      "regions": 2,
+      "seconds": 1.308802521,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "yuusha-05.jpg",
+      "regions": 2,
+      "seconds": 2.020161894,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    },
+    {
+      "fixture": "yuusha-21.jpg",
+      "regions": 8,
+      "seconds": 2.523460191,
+      "engine": "ExecuTorch 1.5.1 / MAGI + YOLO segmentation / OpenCV",
+      "completeRegions": true
+    }
+  ]
+}

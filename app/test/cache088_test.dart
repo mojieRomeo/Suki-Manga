@@ -8,7 +8,7 @@ import 'package:gejian/screens.dart';
 
 void main() {
   test('loading and ready gestures use the same directions', () {
-    for (final d in [const Offset(0, 200), const Offset(200, 0)]) {
+    for (final d in [const Offset(0, -200), const Offset(200, 0)]) {
       expect(loadingPageDelta(d), 1);
       expect(swipePageDelta(d), 1);
       expect(loadingPageDelta(-d), -1);

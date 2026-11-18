@@ -36,7 +36,7 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 28
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
-        testInstrumentationRunner = "android.test.InstrumentationTestRunner"
+        testInstrumentationRunner = "com.gejian.gejian.ReaderProbe"
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
@@ -69,6 +69,6 @@ flutter {
     source = "../.."
 }
 
-dependencies { implementation("org.pytorch:executorch-android:1.5.1"); implementation("org.opencv:opencv:4.13.0") }
+dependencies { implementation("androidx.webkit:webkit:1.12.1"); implementation("org.pytorch:executorch-android:1.5.1"); implementation("org.opencv:opencv:4.13.0") }
 
 

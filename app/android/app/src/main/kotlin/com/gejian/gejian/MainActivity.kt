@@ -7,6 +7,8 @@ import android.os.Looper
 import android.provider.OpenableColumns
 import android.view.WindowManager
 import android.webkit.WebView
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import android.webkit.WebViewClient
 import android.webkit.WebResourceRequest
 import io.flutter.embedding.android.FlutterActivity
@@ -17,6 +19,14 @@ import org.json.JSONTokener
 import java.io.File
 import java.util.concurrent.Executors
 class MainActivity : FlutterActivity() {
+ private val startupStarted=android.os.SystemClock.elapsedRealtime()
+ override fun onCreate(savedInstanceState:android.os.Bundle?){
+  super.onCreate(savedInstanceState)
+  // Flutter continues the same artwork; do not let Android zoom it away first.
+  if(android.os.Build.VERSION.SDK_INT>=31){
+   splashScreen.setOnExitAnimationListener { it.remove() }
+  }
+ }
  private val worker=Executors.newSingleThreadExecutor()
  @Volatile private var inferenceEpoch=0
  private var picker:MethodChannel.Result?=null
@@ -26,6 +36,7 @@ class MainActivity : FlutterActivity() {
   super.configureFlutterEngine(engine);detector=ComicEngine(this)
   MethodChannel(engine.dartExecutor.binaryMessenger,"gejian/native").setMethodCallHandler { call,result ->
    when(call.method){
+    "startupElapsed" -> result.success(android.os.SystemClock.elapsedRealtime()-startupStarted)
     "systemProxy" -> {val manager=getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager;val proxy=manager.defaultProxy;result.success(if(proxy!=null&&proxy.host!=null&&proxy.port>0) "${proxy.host}:${proxy.port}" else null)}
     "mdCookies" -> result.success(android.webkit.CookieManager.getInstance().getCookie("https://api.mangadex.org")?:"")
     "directory" -> result.success(File(filesDir,"library").absolutePath)
@@ -35,15 +46,104 @@ class MainActivity : FlutterActivity() {
 
     "pick" -> {if(picker!=null){result.error("BUSY","文件选择器已打开",null)}else{picker=result;startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),71)}}
     "copy" -> copyPage(call.argument<String>("route")!!,call.argument<String>("kind")!!,call.argument<String>("html"),result)
+    "sourcePage" -> sourcePage(call.argument<String>("url")!!,call.argument<String>("kind")?:"html",result,call.argument<Boolean>("interactive")==true)
     "mdJson" -> mdPage(call.argument<String>("url")!!,result)
     else -> result.notImplemented()
    }
   }
  }
+
+ private fun protectSourceClipboard(web:WebView):Boolean{
+  val script="""(()=>{
+   const denied=()=>Promise.reject(new DOMException('Clipboard access disabled for source pages','NotAllowedError'));
+   const clipboard={read:denied,readText:denied,write:denied,writeText:denied};
+   try{Object.defineProperty(Navigator.prototype,'clipboard',{get:()=>clipboard,configurable:false})}catch(_){}
+   const exec=document.execCommand.bind(document);
+   document.execCommand=(command,...args)=>/^(paste|copy|cut)$/i.test(command)?false:exec(command,...args);
+  })();"""
+  if(WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)){
+   WebViewCompat.addDocumentStartJavaScript(web,script,setOf("*"))
+   return true
+  }else{
+   return false
+  }
+ }
+ private fun sourcePage(url:String,kind:String,result:MethodChannel.Result,interactive:Boolean=false){
+  val uri=Uri.parse(url)
+  val allowed=setOf("www.copy4000.com")
+  if(uri.scheme!="https"||uri.host !in allowed){result.error("SOURCE","无效的书源地址",null);return}
+  val background=!interactive
+  val dialog=Dialog(this);val web=WebView(this);views.add(web)
+  if(!protectSourceClipboard(web)){views.remove(web);web.destroy();result.error("SOURCE","请更新 Android System WebView 后读取网页书源，以阻止网页访问剪贴板",null);return}
+  web.settings.javaScriptEnabled=true;web.settings.domStorageEnabled=true
+  android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(web,true)
+  web.settings.allowFileAccess=false;web.settings.allowContentAccess=false
+  web.settings.userAgentString="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+  val container=android.widget.LinearLayout(this);container.orientation=android.widget.LinearLayout.VERTICAL
+  val status=android.widget.TextView(this);status.text="正在读取书源 · 如需验证，请按网页提示操作，返回可取消";status.setPadding(24,24,24,24);container.addView(status)
+  container.addView(web,android.widget.LinearLayout.LayoutParams(-1,0,1f));dialog.setContentView(container)
+  if(background){
+   container.removeView(web)
+   web.alpha=0f;web.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+   // Keep the normal viewport for responsive/lazy content, outside touch bounds.
+   web.translationX=resources.displayMetrics.widthPixels.toFloat()*2
+   (window.decorView as android.view.ViewGroup).addView(web,android.view.ViewGroup.LayoutParams(resources.displayMetrics.widthPixels,resources.displayMetrics.heightPixels));web.onResume()
+  }
+  val handler=Handler(Looper.getMainLooper());var deadline=System.currentTimeMillis()+30000
+  fun showVerification(){
+   if(dialog.isShowing)return
+   deadline=System.currentTimeMillis()+90000
+   (web.parent as? android.view.ViewGroup)?.removeView(web)
+   web.alpha=1f;web.translationX=0f;web.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+   container.addView(web,android.widget.LinearLayout.LayoutParams(-1,0,1f))
+   status.text="书源需要网站验证或登录 · 请按网页提示操作，返回可取消"
+   dialog.show();dialog.window?.setLayout(-1,-1)
+  }
+  var done=false;var stable=0;var last="";var challengeSince=0L
+  fun finish(value:String?,error:String?){if(done)return;done=true;handler.removeCallbacksAndMessages(null);dialog.setOnCancelListener(null);dialog.dismiss();web.stopLoading();(web.parent as? android.view.ViewGroup)?.removeView(web);views.remove(web);web.destroy();if(error!=null)result.error(if(error=="SOURCE_VERIFICATION")error else "SOURCE",if(error=="SOURCE_VERIFICATION")"书源需要网站验证，请主动点击验证书源" else error,null)else result.success(value)}
+  dialog.setOnCancelListener{finish(null,"已取消书源读取，阅读记录已保留")}
+  web.webViewClient=object:WebViewClient(){
+   override fun shouldOverrideUrlLoading(v:WebView,r:WebResourceRequest):Boolean = r.url.scheme!="https" || r.url.host !in allowed
+   override fun onPageFinished(v:WebView,u:String){
+    v.evaluateJavascript("(()=>{try{const body=JSON.parse(document.body.innerText);return body.error==='challenge_required'?body.challenge_url:''}catch(_){return ''}})()"){raw->
+     if(!done)try{val path=JSONTokener(raw).nextValue() as? String;if(!path.isNullOrBlank()){val next=java.net.URI(u).resolve(path);if(next.scheme=="https"&&next.host==Uri.parse(u).host){if(interactive){showVerification();v.loadUrl(next.toString())}else finish(null,"SOURCE_VERIFICATION")}}}catch(_:Exception){}
+    }
+   }
+   override fun onReceivedError(v:WebView,r:WebResourceRequest,e:android.webkit.WebResourceError){if(r.isForMainFrame)finish(null,"书源网页无法加载：${e.description}")}
+  }
+  val expression=when(kind){
+   "json" -> "(()=>{let t=document.body?.innerText||'';try{JSON.parse(t);return t}catch(e){return ''}})()"
+   else -> "(()=>{if(!/^https:/.test(location.href)||document.readyState==='loading'||!document.body||!document.body.innerHTML.trim()||document.querySelector('#challenge-running, #challenge-stage')||/Just a moment|Attention Required|验证中|正在验证浏览器/.test(document.title)||/challenge_required/.test(document.body.innerText)||location.pathname.includes('__gatekeeper_challenge'))return '';return document.documentElement.outerHTML})()"
+  }
+  val poll=object:Runnable{override fun run(){if(done)return;if(System.currentTimeMillis()>deadline){finish(null,"书源读取超时，网站可能需要验证或暂不可用，请重试或切换书源");return};web.evaluateJavascript(expression){raw->
+   if(done)return@evaluateJavascript
+   try{val value=JSONTokener(raw).nextValue();val decoded=if(value is String)value else "";stable=if(decoded.isNotEmpty()&&decoded==last)stable+1 else 0;last=decoded
+    if(decoded.isNotEmpty()&&stable>=2){finish(decoded,null);return@evaluateJavascript}
+   }catch(_:Exception){}
+   if(background&&!dialog.isShowing){
+    web.evaluateJavascript("Boolean(document.querySelector('#challenge-running, #challenge-stage, #cf-challenge-running, .cf-turnstile')||/Just a moment|Attention Required|正在验证浏览器/.test(document.title))"){challenge->if(!done){
+     if(challenge=="true"){
+      val now=android.os.SystemClock.elapsedRealtime()
+      if(challengeSince==0L)challengeSince=now
+      if(now-challengeSince>=6000){finish(null,"SOURCE_VERIFICATION")}
+     }else challengeSince=0L
+    }}
+   }
+   handler.postDelayed(this,500)
+  }}}
+  if(!background){
+   deadline=System.currentTimeMillis()+90000
+   dialog.show();dialog.window?.setLayout(-1,-1)
+  }
+  web.loadUrl(url)
+  handler.postDelayed(poll,300)
+ }
+
  private fun mdPage(url:String,result:MethodChannel.Result){
   android.util.Log.d("GejianMD","Loading verification URL: "+url)
   val uri=Uri.parse(url);if(uri.scheme!="https"||uri.host!="api.mangadex.org"){result.error("SOURCE","无效的书源地址",null);return}
   val dialog=Dialog(this);val web=WebView(this);views.add(web)
+  if(!protectSourceClipboard(web)){views.remove(web);web.destroy();result.error("SOURCE","请更新 Android System WebView 后读取网页书源",null);return}
   web.settings.javaScriptEnabled=true;web.settings.domStorageEnabled=true;web.settings.allowFileAccess=false;web.settings.allowContentAccess=false
   web.settings.userAgentString="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
   val container=android.widget.LinearLayout(this);container.orientation=android.widget.LinearLayout.VERTICAL
@@ -64,14 +164,14 @@ class MainActivity : FlutterActivity() {
  @Deprecated("Android compatibility callback") override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data);if(requestCode!=71)return;val result=picker?:return;picker=null;val uri=data?.data;if(resultCode!=RESULT_OK||uri==null){result.success(null);return};worker.execute{try{var name="漫画图片";contentResolver.query(uri,null,null,null,null)?.use{if(it.moveToFirst()){val col=it.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(col>=0)name=it.getString(col)}};val file=File(cacheDir,"import-${System.currentTimeMillis()}");contentResolver.openInputStream(uri)!!.use{input->file.outputStream().use{out->input.copyTo(out)}};runOnUiThread{result.success(mapOf("name" to name,"path" to file.absolutePath))}}catch(e:Exception){runOnUiThread{result.error("IMPORT",e.message,null)}}}}
  private fun copyPage(route:String,kind:String,html:String?,result:MethodChannel.Result){
   if(!Regex("/comic/[a-zA-Z0-9_-]+(/chapter/[a-f0-9-]{36})?").matches(route)){result.error("PATH","书源路径无效",null);return}
-  val web=WebView(this);views.add(web);web.settings.javaScriptEnabled=true;web.settings.domStorageEnabled=true;web.settings.allowFileAccess=false;web.settings.allowContentAccess=false;web.alpha=0f;web.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS;(window.decorView as android.view.ViewGroup).addView(web,android.view.ViewGroup.LayoutParams(1,1));web.onResume()
+  val web=WebView(this);views.add(web);if(!protectSourceClipboard(web)){views.remove(web);web.destroy();result.error("SOURCE","请更新 Android System WebView 后读取网页书源",null);return};web.settings.javaScriptEnabled=true;web.settings.domStorageEnabled=true;web.settings.allowFileAccess=false;web.settings.allowContentAccess=false;web.alpha=0f;web.importantForAccessibility=android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS;(window.decorView as android.view.ViewGroup).addView(web,android.view.ViewGroup.LayoutParams(1,1));web.onResume()
   web.settings.userAgentString="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
   val handler=Handler(Looper.getMainLooper());val deadline=System.currentTimeMillis()+60000;var done=false;var stable=0;var last=""
   fun finish(value:String?,error:String?){if(done)return;done=true;web.stopLoading();(web.parent as? android.view.ViewGroup)?.removeView(web);web.destroy();views.remove(web);if(error!=null)result.error("SOURCE",error,null) else result.success(value)}
-  web.webViewClient=object:WebViewClient(){override fun shouldOverrideUrlLoading(v:WebView,r:WebResourceRequest):Boolean = r.url.host!="www.mangacopy.com" || (r.isForMainFrame && r.url.path!=route)}
+  web.webViewClient=object:WebViewClient(){override fun shouldOverrideUrlLoading(v:WebView,r:WebResourceRequest):Boolean = r.url.host!="www.copy4000.com" || (r.isForMainFrame && r.url.path!=route)}
   val expression=if(kind=="detail") "JSON.stringify([...document.querySelectorAll('a[href*=\"/chapter/\"]')].filter(a=>!a.classList.contains('btn')).map(a=>({id:a.href.split('/').pop(),title:a.textContent.trim()})))" else "JSON.stringify((()=>{for(let n=0;n<500;n++)if(typeof window.onscroll==='function')window.onscroll();let a=[...document.querySelectorAll('.comicContent-list img')].map(i=>i.getAttribute('data-src')||i.src);return a.length===Number(document.querySelector('.comicCount')?.textContent)?a:[]})())"
   val poll=object:Runnable{override fun run(){if(done)return;if(System.currentTimeMillis()>deadline){finish(null,"拷贝漫画页面读取超时，来源可能暂时不可用或需要验证");return};web.evaluateJavascript(expression){value->try{val decoded=JSONTokener(value).nextValue().toString();val array=JSONArray(decoded);stable=if(decoded==last)stable+1 else 0;last=decoded;if(array.length()>0&&stable>=3){finish(decoded,null)}else{handler.postDelayed(this,350)}}catch(e:Exception){handler.postDelayed(this,350)}}}}
-  if(html!=null)web.loadDataWithBaseURL("https://www.mangacopy.com$route",html,"text/html","UTF-8",null) else web.loadUrl("https://www.mangacopy.com$route");handler.postDelayed(poll,900)
+  if(html!=null)web.loadDataWithBaseURL("https://www.copy4000.com$route",html,"text/html","UTF-8",null) else web.loadUrl("https://www.copy4000.com$route");handler.postDelayed(poll,900)
  }
  override fun onDestroy(){for(v in views.toList())v.destroy();views.clear();worker.shutdown();super.onDestroy()}
 }

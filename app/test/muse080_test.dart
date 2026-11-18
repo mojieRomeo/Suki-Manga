@@ -10,9 +10,9 @@ import 'package:gejian/splash.dart';
 
 void main() {
   test('four swipe directions always indicate whole-page navigation', () {
-    expect(swipePageDelta(const Offset(0, -200)), -1);
+    expect(swipePageDelta(const Offset(0, -200)), 1);
     expect(swipePageDelta(const Offset(200, 0)), 1);
-    expect(swipePageDelta(const Offset(0, 200)), 1);
+    expect(swipePageDelta(const Offset(0, 200)), -1);
     expect(swipePageDelta(const Offset(-200, 0)), -1);
     expect(swipePageDelta(const Offset(10, 10)), 0);
   });
@@ -68,7 +68,7 @@ void main() {
       }
     },
   );
-  testWidgets('animated cover wall fits the viewport and disposes its timer', (
+  testWidgets('startup title fits the viewport and disposes its timer', (
     t,
   ) async {
     await t.pumpWidget(

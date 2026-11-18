@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:xml/xml.dart';
 
+part 'web_sources.dart';
+
 const native = MethodChannel('gejian/native');
 String keyFor(String value) => sha256.convert(utf8.encode(value)).toString();
 typedef Json = Map<String, dynamic>;
@@ -82,6 +84,11 @@ class LibraryStore extends ChangeNotifier {
     final path = await native.invokeMethod<String>('directory');
     final root = Directory(path!);
     await root.create(recursive: true);
+    // Remove retired artwork splash files, preserving all reading data.
+    final legacyStartup = Directory('${root.path}/startup');
+    if (await legacyStartup.exists()) {
+      await legacyStartup.delete(recursive: true);
+    }
     Json data = {};
     final file = File('${root.path}/library.json');
     if (await file.exists()) {
@@ -169,9 +176,7 @@ class LibraryStore extends ChangeNotifier {
         if (url.startsWith('/')) return File(url);
         final bytes = await Sources.bytes(
           url,
-          referer: b.source == 'copy'
-              ? 'https://www.mangacopy.com/'
-              : 'https://mangadex.org/',
+          referer: Sources.refererFor(b.source),
         );
         final tmp = File('${file.path}.part');
         await tmp.writeAsBytes(bytes, flush: true);
@@ -183,16 +188,34 @@ class LibraryStore extends ChangeNotifier {
     });
   }
 
-  final Map<String, Future<Json>> _analysisPending = {};
+  final Map<String, Future<String>> _analysisPending = {};
+  final Map<String, String> _analysisMemory = {};
   bool get analysisBusy => _analysisPending.isNotEmpty;
-  Future<Json> recognize(File image, {bool background = false}) =>
-      _analysisPending.putIfAbsent(image.path, () async {
-        try {
-          return await _recognize(image, background);
-        } finally {
-          _analysisPending.remove(image.path);
+  Future<Json> recognize(File image, {bool background = false}) async {
+    final stat = await image.stat();
+    final key =
+        '${image.path}:${stat.size}:${stat.modified.microsecondsSinceEpoch}:${stat.changed.microsecondsSinceEpoch}';
+    final cached = _analysisMemory.remove(key);
+    if (cached != null) {
+      _analysisMemory[key] = cached;
+      return jsonDecode(cached) as Json;
+    }
+    final encoded = await _analysisPending.putIfAbsent(key, () async {
+      try {
+        final value = jsonEncode(await _recognize(image, background));
+        _analysisMemory[key] = value;
+        while (_analysisMemory.length > 8) {
+          _analysisMemory.remove(_analysisMemory.keys.first);
         }
-      });
+        return value;
+      } finally {
+        _analysisPending.remove(key);
+      }
+    });
+    // Reader layouts are mutable: every consumer owns its own copy.
+    return jsonDecode(encoded) as Json;
+  }
+
   static bool ambiguousGaps(Json layout) {
     final panels = layout['panels'] as List? ?? [];
     if (panels.any(
@@ -490,6 +513,7 @@ class LibraryStore extends ChangeNotifier {
       throw StateError('该章节仍在下载，请等待下载完成');
     }
     final d = chapterDir(b, c);
+    _analysisMemory.clear();
     if (await d.exists()) await d.delete(recursive: true);
     notifyListeners();
   }
@@ -497,6 +521,7 @@ class LibraryStore extends ChangeNotifier {
   Future<void> clearAnalysis() async {
     if (_analysisPending.isNotEmpty) throw StateError('正在识别，请退出阅读并等待当前任务完成后清理');
     final d = Directory('${root.path}/analysis');
+    _analysisMemory.clear();
     if (await d.exists()) await d.delete(recursive: true);
     notifyListeners();
   }
@@ -519,7 +544,7 @@ class LibraryStore extends ChangeNotifier {
       if (entry is Link) throw StateError('不删除链接文件');
       if (!await entry.exists()) continue;
       final path = await entry.resolveSymbolicLinks();
-      if (!['analysis', 'covers', 'pages', 'imports', 'startup'].any(
+      if (!['analysis', 'covers', 'pages', 'imports'].any(
         (folder) => path.startsWith(
           '$base${Platform.pathSeparator}$folder${Platform.pathSeparator}',
         ),
@@ -529,6 +554,7 @@ class LibraryStore extends ChangeNotifier {
       valid.add(entry is Directory ? Directory(path) : File(path));
       originals[path] = entry;
     }
+    _analysisMemory.clear();
     bool stateChanged = false;
     try {
       // Bounded concurrent deletes; no repeated full-directory size scans.
@@ -573,9 +599,7 @@ class LibraryStore extends ChangeNotifier {
         }
         final bytes = await Sources.bytes(
           b.cover,
-          referer: b.source == 'copy'
-              ? 'https://www.mangacopy.com/'
-              : 'https://mangadex.org/',
+          referer: Sources.refererFor(b.source),
         );
         if (!await validImage(bytes)) throw StateError('封面来源没有返回有效图片，请重试');
         final temporary = File('${file.path}.part');
@@ -767,6 +791,10 @@ int naturalCompare(String a, String b) {
 }
 
 class Sources {
+  static const names = <String, String>{'md': 'MangaDex', 'copy': '拷贝漫画'};
+  static String refererFor(String source) =>
+      source == 'md' ? 'https://mangadex.org/' : WebSources.roots[source] ?? '';
+
   static bool isMangaDexHost(String host) =>
       host == 'mangadex.org' ||
       host.endsWith('.mangadex.org') ||
@@ -786,7 +814,9 @@ class Sources {
     ..connectionTimeout = const Duration(seconds: 25);
   static Future<Uint8List> bytes(String url, {String? referer}) async {
     final uri = Uri.parse(url);
-    if (uri.scheme != 'https') throw StateError('书源返回了非 HTTPS 地址');
+    if (uri.scheme != 'https') {
+      throw StateError('书源返回了不支持的地址');
+    }
     final req = await client.getUrl(uri).timeout(const Duration(seconds: 30));
     req.headers.set(
       'User-Agent',
@@ -805,6 +835,7 @@ class Sources {
     if (uri.host == 'api.mangadex.org' && mdCookie.isNotEmpty) {
       req.headers.set('Cookie', mdCookie);
     }
+
     if (referer != null) req.headers.set('Referer', referer);
     final res = await req.close().timeout(const Duration(seconds: 45));
     if (uri.host == 'api.mangadex.org' &&
@@ -902,23 +933,7 @@ class Sources {
           .map((b) => md(Map<String, dynamic>.from(b)))
           .toList();
     }
-    final d = await json(
-      'https://www.mangacopy.com/api/kb/web/searchcl/comics?platform=2&offset=$offset&limit=$limit&q=${Uri.encodeComponent(query)}&q_type=',
-    );
-    if (d['code'] != 200) throw StateError(d['message'] ?? '书源暂不可用');
-    return (d['results']['list'] as List)
-        .map(
-          (b) => Book(
-            b['path_word'],
-            'copy',
-            b['name'],
-            b['cover'] ?? '',
-            description: (b['author'] as List? ?? [])
-                .map((a) => a['name'])
-                .join(' / '),
-          ),
-        )
-        .toList();
+    return WebSources.search(source, query, offset: offset, limit: limit);
   }
 
   static Future<void> moreChapters(Book b, {bool reset = false}) async {
@@ -950,21 +965,7 @@ class Sources {
     if (b.source == 'md') {
       await moreChapters(b, reset: true);
     } else {
-      final raw = await native.invokeMethod<String>('copy', {
-        'route': '/comic/${b.id}',
-        'html': utf8.decode(
-          await bytes('https://www.mangacopy.com/comic/${b.id}'),
-        ),
-        'kind': 'detail',
-      });
-      final list = jsonDecode(raw!) as List;
-      final seen = <String>{};
-      b.chapters =
-          list
-              .where((x) => seen.add(x['id']))
-              .map((x) => Chapter(x['id'], x['title']))
-              .toList()
-            ..sort((a, b) => naturalCompare(a.title, b.title));
+      await WebSources.chapters(b);
     }
     if (b.chapters.isEmpty) throw StateError('这部漫画暂时没有可读章节');
   }
@@ -976,17 +977,8 @@ class Sources {
       c.pages = (d['chapter']['data'] as List)
           .map((f) => '${d['baseUrl']}/data/${d['chapter']['hash']}/$f')
           .toList();
-    } else if (b.source == 'copy') {
-      final raw = await native.invokeMethod<String>('copy', {
-        'route': '/comic/${b.id}/chapter/${c.id}',
-        'html': utf8.decode(
-          await bytes(
-            'https://www.mangacopy.com/comic/${b.id}/chapter/${c.id}',
-          ),
-        ),
-        'kind': 'chapter',
-      });
-      c.pages = List<String>.from(jsonDecode(raw!));
+    } else if (b.source != 'local') {
+      c.pages = await WebSources.pages(b, c);
     }
     if (c.pages.isEmpty) throw StateError('章节没有图片');
   }

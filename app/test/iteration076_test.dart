@@ -46,14 +46,14 @@ void main() {
       expect(store.state['readerMode'], 'page');
       await t.fling(
         find.byType(CircularProgressIndicator),
-        const Offset(0, 200),
+        const Offset(0, -200),
         800,
       );
       await t.pump();
       expect(find.text('2/2'), findsOneWidget);
       await t.fling(
         find.byType(CircularProgressIndicator),
-        const Offset(0, -200),
+        const Offset(0, 200),
         800,
       );
       await t.pump();

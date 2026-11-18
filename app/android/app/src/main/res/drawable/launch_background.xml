@@ -1,1 +1,2 @@
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android"><item android:drawable="@android:color/black"/><item android:drawable="@drawable/suki_wordmark" android:width="205dp" android:height="45dp" android:gravity="center"/></layer-list>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"><item android:drawable="@android:color/black"/><item><bitmap android:src="@drawable/startup_title" android:gravity="fill" android:filter="true"/></item></layer-list>
+

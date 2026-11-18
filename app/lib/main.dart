@@ -9,7 +9,9 @@ Future<void> main() async {
   if (proxy != null && proxy.isNotEmpty) {
     Sources.client.findProxy = (_) => 'PROXY $proxy';
   }
-  runApp(GejianApp(store: await LibraryStore.open()));
+  final store = await LibraryStore.open();
+  WidgetsBinding.instance.deferFirstFrame();
+  runApp(GejianApp(store: store));
 }
 
 class GejianApp extends StatelessWidget {
@@ -31,6 +33,9 @@ class GejianApp extends StatelessWidget {
         backgroundColor: Color(0xffefedf6),
       ),
     ),
-    home: MuseSplash(store: store),
+    home: MuseSplash(
+      store: store,
+      onArtworkReady: WidgetsBinding.instance.allowFirstFrame,
+    ),
   );
 }

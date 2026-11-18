@@ -23,6 +23,10 @@ Ultralytics is under AGPL-3.0 with separately offered commercial terms. Android 
 
 Acme Regular by Huerta Tipografica, distributed under the SIL Open Font License 1.1. Font and license are bundled in app/assets/branding/Acme-Regular.ttf and Acme-OFL.txt. Source: https://github.com/google/fonts/tree/main/ofl/acme .
 
-The ten startup covers were retrieved from MangaDex; individual title and cover URLs and selection date are recorded in app/assets/branding/cover_sources.json. Cover artwork remains the property of its respective rights holders.
+The current preload version displays the Suki Manga title and fades directly into the home screen; the older daily cover animation is disabled. Legacy bundled cover resources remain part of the matching source baseline. The ten startup covers were retrieved from MangaDex; individual title and cover URLs and selection date are recorded in app/assets/branding/cover_sources.json. Cover artwork remains the property of its respective rights holders.
 
 Runtime dependencies: Flutter/Dart (BSD-3-Clause), AndroidX (Apache-2.0), OpenCV (Apache-2.0), ExecuTorch (BSD-3-Clause); see their upstream distributions for full notices. The source-model bundle retains MAGI README.md and pinned source files. The bubble model is conservatively treated as AGPL-3.0, including the linked export source. Cover artwork is not relicensed by this repository.
+
+## Documentation examples
+
+Comic excerpts in docs/images are technical illustrations from the user-provided regression material. Copyright remains with the respective creators, publishers and translators; they are not relicensed under the application AGPL license. Region overlays visualize actual native output, not manually corrected segmentation or an old/new accuracy benchmark.

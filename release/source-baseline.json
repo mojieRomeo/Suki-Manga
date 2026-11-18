@@ -1,32 +1,113 @@
 {
   "version": "0.8.11+811",
-  "apk": "SukiManga-0.8.11-Android.apk",
-  "apkBytes": 329382850,
-  "apkSha256": "9ec4724694558de2f0a92c762c565d2e6bbf208811c3a71dff576c3c94a617b9",
+  "apk": "SukiManga-0.8.11-preload.apk",
+  "apkBytes": 330015840,
+  "apkSha256": "52621b863e5592c5a4144ff831f37f31f2f6cd5dd914f79f56b0773e6e0e12b3",
+  "note": "Local final-version runtime sources and resources matched at publication. Portable signing/build configuration differs; this is not proof of a byte-for-byte reproducible APK. Models are pinned separately in models/manifest.json.",
   "runtimeSourceAndResources": [
     {
       "path": "app/lib/data.dart",
-      "sha256": "63e449e04be8f942b203a542aa5a139d2aa5d605470ddb8bf1d9d86aa8ecc359"
+      "sha256": "36c5faf9656605b17d55657ea78817a5de0f35c5fcb18190d958e8de0bf132df"
     },
     {
       "path": "app/lib/main.dart",
-      "sha256": "a07a6a54ee330ee16a1624810b187b8896295c38209f8e76ad4d86f734ba9564"
+      "sha256": "2d49fe198e39ca5d5a3af0d735f95e98d26e6ad823d0fe0aa4e023dc174641d7"
     },
     {
       "path": "app/lib/reader.dart",
-      "sha256": "73f4cabaf9bcc5fd761b0e81a428214fbbc4c855a7c43fff49e1994a57152431"
+      "sha256": "445a7ee3f9305dc1e39e73a56e147670f5a728413ed500fed37f53ddff4831e6"
     },
     {
       "path": "app/lib/screens.dart",
-      "sha256": "5a91f52b0fb2f2d46171dce391091499bac0d0ace733d2f1af717fa8fc0b62be"
+      "sha256": "8cf236463a42b03007d47d8be0923a5767a88ccc0eefef6a015b12bf4f584083"
     },
     {
       "path": "app/lib/splash.dart",
-      "sha256": "e53c2b82572d3823ddab17a18e75806cc6e5efab4974e19d5229b96d0abc83b6"
+      "sha256": "c4681c8126b133be86497390f3510c7517992dd6a42de350387c9ff7b9dc764e"
     },
     {
       "path": "app/lib/startup.dart",
-      "sha256": "842a7d0e6de347af2697f434c6baa33e35062d42190c231b8791d4b0813005d5"
+      "sha256": "0691e43e6871ed011c1d7d17368e8e95eba651dd37ce7bffc58cbc1f7bd3944d"
+    },
+    {
+      "path": "app/lib/vertical_reader.dart",
+      "sha256": "18328d4b80f4e4e8b661775c0087d66c1107ade1a82e4817887cd6e1e36cb05e"
+    },
+    {
+      "path": "app/lib/web_sources.dart",
+      "sha256": "385bb9101689fab3b77a4e5921ea1724154d35d265c5e385df2630b06cb64055"
+    },
+    {
+      "path": "app/assets/branding/Acme-OFL.txt",
+      "sha256": "48f7bdf873033e141893f72d36f06ef8aa320c822d884d59ea7847899a291025"
+    },
+    {
+      "path": "app/assets/branding/Acme-Regular.ttf",
+      "sha256": "76fdb582f54653c27274d5cd986f994c28d7fa7d323e7eb9ee14ce8875d39dc4"
+    },
+    {
+      "path": "app/assets/branding/cover_0.jpg",
+      "sha256": "13504523f8ff454a990185f46d1de285021cd255e14335ed79894fa2111348e4"
+    },
+    {
+      "path": "app/assets/branding/cover_1.jpg",
+      "sha256": "9992dc5861f6c3a90262c179fa53c302d391ada820f047e7b3f713bef4c6b72d"
+    },
+    {
+      "path": "app/assets/branding/cover_2.jpg",
+      "sha256": "51495116d71ef49ceb6c0136411e272a3c0f1dd0cecdaa02dd2fed0f14ec0ac5"
+    },
+    {
+      "path": "app/assets/branding/cover_3.jpg",
+      "sha256": "165decc946d909c250e8555546309cf5449923d5da822775a0a3c7251215e4a1"
+    },
+    {
+      "path": "app/assets/branding/cover_4.jpg",
+      "sha256": "98ab08fe24803fb6ab9e7afae28ea5dc4ab77a331f27d18828e244a9bc2ad9d8"
+    },
+    {
+      "path": "app/assets/branding/cover_5.jpg",
+      "sha256": "78235a04cd7ad2ee545d62f80ad260f3442460a37978c3fc3f863eacd2514bb9"
+    },
+    {
+      "path": "app/assets/branding/cover_6.jpg",
+      "sha256": "f9f0a592dd935aa869f6c71abbd9a749ac13cdd3d429e659f610215847dcf45f"
+    },
+    {
+      "path": "app/assets/branding/cover_7.jpg",
+      "sha256": "52ecb617a16dbd750cbfa7d10b96a2c4ddc181f7b4dad35eb5912728a25dbf51"
+    },
+    {
+      "path": "app/assets/branding/cover_8.jpg",
+      "sha256": "e8458b40360199fa8de51f1227d34f2dda4cdf8440a5d44753f022ca033ee3b6"
+    },
+    {
+      "path": "app/assets/branding/cover_9.jpg",
+      "sha256": "80316911f246a12ef667db7c45123c7555224cb85f8672f8a10e6a0e598c5279"
+    },
+    {
+      "path": "app/assets/branding/cover_sources.json",
+      "sha256": "c88ba2b12b085866c53b3fb24a88dc22fb7245885b0c2c5b8d1a6701e0b34902"
+    },
+    {
+      "path": "app/assets/branding/LilitaOne-OFL.txt",
+      "sha256": "255d5debbb80eb2ea762644311f266a279e8778f00156655a516e2b7781a63e1"
+    },
+    {
+      "path": "app/assets/branding/LilitaOne-Regular.ttf",
+      "sha256": "f5b641c45c69d772ee4eda687bc9fda411d5cad6b0b45371491da4580cbc8d59"
+    },
+    {
+      "path": "app/assets/branding/muse-manga-icon.png",
+      "sha256": "6bf754028466429fd8a88e5aa8579be29fe16e4ecbe01380083805f9dbd917a6"
+    },
+    {
+      "path": "app/assets/branding/startup_fallback.jpg",
+      "sha256": "c7f784fc65e0a6b924aaa5120b65abebaf6801e4ed8ec710a34f7688f0d4eb09"
+    },
+    {
+      "path": "app/assets/branding/startup_title.png",
+      "sha256": "3ab43e328909df754f9beb44fe640cf3e782412891c64c30f00ab8b0d643066b"
     },
     {
       "path": "app/android/app/src/main/AndroidManifest.xml",
@@ -38,15 +119,15 @@
     },
     {
       "path": "app/android/app/src/main/kotlin/com/gejian/gejian/MainActivity.kt",
-      "sha256": "8ca94d2c12174e67e63d78a0bd98431f1435ab69b1a5eaeb3b4c840054774f85"
+      "sha256": "64a1e5c6aedd9053820da4110baa497831e4604de274cf42842be06760d0bae0"
     },
     {
       "path": "app/android/app/src/main/res/drawable/launch_background.xml",
-      "sha256": "62ef65c8d3ea161f27e246fab2ad3cfa4704785ad75a6e668244346d9a78878e"
+      "sha256": "f9ab07b433e9e4d629972ad89b7ad73aa185e41ba327ce8b9cb6be902d6ddf49"
     },
     {
       "path": "app/android/app/src/main/res/drawable/suki_splash_icon.xml",
-      "sha256": "f03400ea66fef7aed55f5fe653937b4992e3ce0c8ef3321081f0a1642228fb5b"
+      "sha256": "eaf928366b07eb2a799b024a8fe0453c973dc43f81e94a3e1305bcb3c1dbc6d2"
     },
     {
       "path": "app/android/app/src/main/res/drawable/suki_wordmark.xml",
@@ -61,8 +142,12 @@
       "sha256": "419c0204482dc2c95ce62561de89beaa3cfe362cb14aa42b11d502ccf17fdd58"
     },
     {
+      "path": "app/android/app/src/main/res/drawable-nodpi/startup_title.png",
+      "sha256": "3ab43e328909df754f9beb44fe640cf3e782412891c64c30f00ab8b0d643066b"
+    },
+    {
       "path": "app/android/app/src/main/res/drawable-v21/launch_background.xml",
-      "sha256": "62ef65c8d3ea161f27e246fab2ad3cfa4704785ad75a6e668244346d9a78878e"
+      "sha256": "f9ab07b433e9e4d629972ad89b7ad73aa185e41ba327ce8b9cb6be902d6ddf49"
     },
     {
       "path": "app/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
